@@ -1,0 +1,200 @@
+
+baremetal.elf:     file format elf32-littleriscv
+
+SYMBOL TABLE:
+80000000 l    d  .text	00000000 .text
+80000140 l    d  .data	00000000 .data
+800001d0 l    d  .heap	00000000 .heap
+800011d0 l    d  .stack	00000000 .stack
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_loclists	00000000 .debug_loclists
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_rnglists	00000000 .debug_rnglists
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .debug_line_str	00000000 .debug_line_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .riscv.attributes	00000000 .riscv.attributes
+00000000 l    d  .debug_frame	00000000 .debug_frame
+00000000 l    df *ABS*	00000000 ccYpwqrc.o
+800001b0 l       .data	00000000 asm_label
+00000000 l    df *ABS*	00000000 baremetal.c
+80000044 l     F .text	00000008 lprint
+800001d0 g       .heap	00000000 _sheap
+00001000 g       *ABS*	00000000 __stack_size
+800001d0 g       .data	00000000 __BSS_BEGIN__
+80000020 g       .text	00000000 asm_demo_func
+00001000 g       *ABS*	00000000 __heap_size
+80000000 g       .text	00000000 _start
+800001ca g       .data	00000000 __DATA_END__
+1100bff8 g       *ABS*	00000000 TIMERL
+800001d0 g       .data	00000000 __BSS_END__
+8000004c g     F .text	000000f4 main
+80000140 g       .text	00000000 __TEXT_END__
+800021d0 g       .stack	00000000 _sstack
+800011d0 g       .stack	00000000 _estack
+80000140 g       .data	00000000 __DATA_BEGIN__
+800011d0 g       .heap	00000000 _eheap
+11100000 g       *ABS*	00000000 SYSCON
+80000000 g       .text	00000000 __TEXT_BEGIN__
+
+
+
+baremetal.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+80000000 <__TEXT_BEGIN__>:
+80000000:	00002117          	auipc	sp,0x2
+80000004:	1d010113          	addi	sp,sp,464 # 800021d0 <_sstack>
+80000008:	ff010113          	addi	sp,sp,-16
+8000000c:	00112623          	sw	ra,12(sp)
+80000010:	03c000ef          	jal	ra,8000004c <main>
+	...
+
+80000020 <asm_demo_func>:
+
+.section .text
+
+.align 4
+asm_demo_func:
+	addi sp, sp, -16
+80000020:	ff010113          	addi	sp,sp,-16
+	sw t0, 12(sp)
+80000024:	00512623          	sw	t0,12(sp)
+	la t0, asm_label
+80000028:	00000297          	auipc	t0,0x0
+8000002c:	18828293          	addi	t0,t0,392 # 800001b0 <asm_label>
+	csrw 0x138, t0
+80000030:	13829073          	csrw	0x138,t0
+	lw t0, 12(sp)
+80000034:	00c12283          	lw	t0,12(sp)
+	addi sp, sp, 16
+80000038:	01010113          	addi	sp,sp,16
+	ret
+8000003c:	00008067          	ret
+80000040:	0000                	.2byte	0x0
+	...
+
+80000044 <lprint>:
+
+// These will not turn into function calls, but instead will find a way
+// of writing the assembly in-line
+static void lprint( const char * s )
+{
+	asm volatile( ".option norvc\ncsrrw x0, 0x138, %0\n" : : "r" (s));
+80000044:	13851073          	csrw	0x138,a0
+}
+80000048:	00008067          	ret
+
+8000004c <main>:
+	asm volatile(".option norvc\ncsrr %0, 0xC00":"=r" (ccount));
+	return ccount;
+}
+
+int main()
+{
+8000004c:	fe010113          	addi	sp,sp,-32
+80000050:	00912a23          	sw	s1,20(sp)
+	lprint("\n");
+80000054:	800004b7          	lui	s1,0x80000
+80000058:	14048513          	addi	a0,s1,320 # 80000140 <_sstack+0xffffdf70>
+{
+8000005c:	00112e23          	sw	ra,28(sp)
+80000060:	00812c23          	sw	s0,24(sp)
+80000064:	01212823          	sw	s2,16(sp)
+	lprint("\n");
+80000068:	fddff0ef          	jal	ra,80000044 <lprint>
+	lprint("Hello world from RV32 land.\n");
+8000006c:	80000537          	lui	a0,0x80000
+80000070:	14450513          	addi	a0,a0,324 # 80000144 <_sstack+0xffffdf74>
+80000074:	fd1ff0ef          	jal	ra,80000044 <lprint>
+	lprint("main is at: ");
+80000078:	80000537          	lui	a0,0x80000
+8000007c:	16450513          	addi	a0,a0,356 # 80000164 <_sstack+0xffffdf94>
+80000080:	fc5ff0ef          	jal	ra,80000044 <lprint>
+	asm volatile( ".option norvc\ncsrrw x0, 0x137, %0\n" : : "r" (ptr));
+80000084:	800007b7          	lui	a5,0x80000
+80000088:	04c78793          	addi	a5,a5,76 # 8000004c <_sstack+0xffffde7c>
+8000008c:	13779073          	csrw	0x137,a5
+	pprint( (intptr_t)main );
+	lprint("\nAssembly code: ");
+80000090:	80000537          	lui	a0,0x80000
+80000094:	17450513          	addi	a0,a0,372 # 80000174 <_sstack+0xffffdfa4>
+80000098:	fadff0ef          	jal	ra,80000044 <lprint>
+	asm_demo_func();
+8000009c:	f85ff0ef          	jal	ra,80000020 <asm_demo_func>
+	lprint("\n");
+800000a0:	14048513          	addi	a0,s1,320
+800000a4:	fa1ff0ef          	jal	ra,80000044 <lprint>
+	asm volatile(".option norvc\ncsrr %0, 0xC00":"=r" (ccount));
+800000a8:	c00025f3          	rdcycle	a1
+
+	// Wait a while.
+	uint32_t cyclecount_initial = get_cyc_count();
+	uint32_t timer_initial = TIMERL;
+800000ac:	1100c6b7          	lui	a3,0x1100c
+800000b0:	ff86a603          	lw	a2,-8(a3) # 1100bff8 <TIMERL>
+
+	volatile int i;
+	for( i = 0; i < 1000000; i++ )
+800000b4:	000f47b7          	lui	a5,0xf4
+800000b8:	00012623          	sw	zero,12(sp)
+800000bc:	23f78793          	addi	a5,a5,575 # f423f <__heap_size+0xf323f>
+800000c0:	00c12703          	lw	a4,12(sp)
+800000c4:	06e7d463          	bge	a5,a4,8000012c <main+0xe0>
+	asm volatile(".option norvc\ncsrr %0, 0xC00":"=r" (ccount));
+800000c8:	c0002473          	rdcycle	s0
+		asm volatile( "nop" );
+	}
+
+	// Gather the wall-clock time and # of cycles
+	uint32_t cyclecount = get_cyc_count() - cyclecount_initial;
+	uint32_t timer = TIMERL - timer_initial;
+800000cc:	ff86a903          	lw	s2,-8(a3)
+
+	lprint( "Processor effective speed: ");
+800000d0:	80000537          	lui	a0,0x80000
+	uint32_t cyclecount = get_cyc_count() - cyclecount_initial;
+800000d4:	40b40433          	sub	s0,s0,a1
+	uint32_t timer = TIMERL - timer_initial;
+800000d8:	40c90933          	sub	s2,s2,a2
+	lprint( "Processor effective speed: ");
+800000dc:	18850513          	addi	a0,a0,392 # 80000188 <_sstack+0xffffdfb8>
+800000e0:	f65ff0ef          	jal	ra,80000044 <lprint>
+	nprint( cyclecount / timer );
+800000e4:	03245433          	divu	s0,s0,s2
+	asm volatile( ".option norvc\ncsrrw x0, 0x136, %0\n" : : "r" (ptr));
+800000e8:	13641073          	csrw	0x136,s0
+	lprint( " Mcyc/s\n");
+800000ec:	80000537          	lui	a0,0x80000
+800000f0:	1a450513          	addi	a0,a0,420 # 800001a4 <_sstack+0xffffdfd4>
+800000f4:	f51ff0ef          	jal	ra,80000044 <lprint>
+
+	lprint("\n");
+800000f8:	14048513          	addi	a0,s1,320
+800000fc:	f49ff0ef          	jal	ra,80000044 <lprint>
+	SYSCON = 0x5555; // Power off
+}
+80000100:	01c12083          	lw	ra,28(sp)
+80000104:	01812403          	lw	s0,24(sp)
+	SYSCON = 0x5555; // Power off
+80000108:	000057b7          	lui	a5,0x5
+8000010c:	11100737          	lui	a4,0x11100
+80000110:	55578793          	addi	a5,a5,1365 # 5555 <__heap_size+0x4555>
+80000114:	00f72023          	sw	a5,0(a4) # 11100000 <SYSCON>
+}
+80000118:	01412483          	lw	s1,20(sp)
+8000011c:	01012903          	lw	s2,16(sp)
+80000120:	00000513          	li	a0,0
+80000124:	02010113          	addi	sp,sp,32
+80000128:	00008067          	ret
+		asm volatile( "nop" );
+8000012c:	00000013          	nop
+	for( i = 0; i < 1000000; i++ )
+80000130:	00c12703          	lw	a4,12(sp)
+80000134:	00170713          	addi	a4,a4,1
+80000138:	00e12623          	sw	a4,12(sp)
+8000013c:	f85ff06f          	j	800000c0 <main+0x74>

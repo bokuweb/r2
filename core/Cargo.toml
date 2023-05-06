@@ -1,0 +1,13 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+device_interfaces = { path = "../device_interfaces" }
+
+[lib]
+name = "core"
+path = "src/lib.rs"
