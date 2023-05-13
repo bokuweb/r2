@@ -42,7 +42,7 @@ pub struct WasmCore(core::cpu::Cpu<core::bus::Bus<Elapsed, Term>>);
 #[wasm_bindgen]
 #[allow(clippy::new_without_default)]
 impl WasmCore {
-    pub fn new() -> Self {
+    pub fn start() {
         let ram_size = 640 * 1024 * 1024;
 
         let mut ram = vec![0u8; ram_size];
@@ -58,19 +58,9 @@ impl WasmCore {
         let clint = core::clint::Clint::new(Elapsed);
         let term = Term;
         let bus = core::bus::Bus::new(ram, clint, term);
-        let mut core = core::cpu::Cpu::new(bus);
 
-        core.a0(0x00) // hart id
-            .a1(dtb_ref as u32 + RAM_START) // ref to dtb
-            .pc(RAM_START);
+        let sleep = |_u: std::time::Duration| {};
 
-        WasmCore(core)
-    }
-
-    pub fn step(&mut self) {
-        if let core::cpu::CpuState::Idle = self.0.step() {
-            wait(100);
-            self.0.add_cycles(1);
-        };
+        core::start(bus, RAM_START, dtb_ref as u32 + RAM_START, &sleep);
     }
 }

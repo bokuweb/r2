@@ -17,15 +17,12 @@ const wait = (us) => {
 let displayed = "";
 const tx = (s) => {
   displayed += String.fromCharCode(s);
-  if (displayed.includes("login:")) {
-    ready = true;
-  }
   postMessage(s);
 };
 
-let ready = false;
 const keybuf = [];
-const keydown = () => {
+const keydown = async () => {
+  await delay();
   return !!keybuf.length;
 };
 const rx = () => {
@@ -66,13 +63,6 @@ function notDefined(what) {
 /**
  */
 class WasmCore {
-  static __wrap(ptr) {
-    const obj = Object.create(WasmCore.prototype);
-    obj.ptr = ptr;
-
-    return obj;
-  }
-
   __destroy_into_raw() {
     const ptr = this.ptr;
     this.ptr = 0;
@@ -85,36 +75,26 @@ class WasmCore {
     wasm.__wbg_wasmcore_free(ptr);
   }
   /**
-   * @returns {WasmCore}
    */
-  static new() {
-    const ret = wasm.wasmcore_new();
-    return WasmCore.__wrap(ret);
-  }
-  /**
-   */
-  step() {
-    wasm.wasmcore_step(this.ptr);
+  static async start() {
+    await wasm.wasmcore_start();
   }
 }
 
 async function load(module, imports) {
   if (typeof Response === "function" && module instanceof Response) {
-    if (typeof WebAssembly.instantiateStreaming === "function") {
-      try {
-        return await WebAssembly.instantiateStreaming(module, imports);
-      } catch (e) {
-        if (module.headers.get("Content-Type") != "application/wasm") {
-          console.warn(
-            "`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n",
-            e
-          );
-        } else {
-          throw e;
-        }
+    try {
+      return await instantiateStreaming(module, imports);
+    } catch (e) {
+      if (module.headers.get("Content-Type") != "application/wasm") {
+        console.warn(
+          "`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n",
+          e
+        );
+      } else {
+        throw e;
       }
     }
-
     const bytes = await module.arrayBuffer();
     return await WebAssembly.instantiate(bytes, imports);
   } else {
@@ -140,9 +120,6 @@ function getImports() {
     typeof keydown == "function" ? keydown : notDefined("keydown");
   imports.wbg.__wbg_rx_872d8f80b416285d =
     typeof rx == "function" ? rx : notDefined("rx");
-  imports.wbg.__wbg_wait_e8341c9dc02f44b6 = function (arg0) {
-    wait(arg0 >>> 0);
-  };
   imports.wbg.__wbindgen_throw = function (arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));
   };
@@ -160,23 +137,9 @@ function finalizeInit(instance, module) {
   return wasm;
 }
 
-function initSync(module) {
-  const imports = getImports();
-
-  initMemory(imports);
-
-  if (!(module instanceof WebAssembly.Module)) {
-    module = new WebAssembly.Module(module);
-  }
-
-  const instance = new WebAssembly.Instance(module, imports);
-
-  return finalizeInit(instance, module);
-}
-
 async function init(input) {
   if (typeof input === "undefined") {
-    input = "wasm_bg.wasm";
+    input = "out.wasm";
   }
   const imports = getImports();
 
@@ -195,19 +158,113 @@ async function init(input) {
   return finalizeInit(instance, module);
 }
 
-const delay = () => new Promise((r) => setTimeout(r));
+const delay = () =>
+  new Promise((r) =>
+    setTimeout(() => {
+      r();
+    })
+  );
 
 init().then(async () => {
-  const core = WasmCore.new();
-  while (true) {
-    if (ready) {
-      for (let i = 0; i < 30000; i++) {
-        core.step();
-      }
-      // poll post messages
-      await delay();
-    } else {
-      core.step();
-    }
-  }
+  WasmCore.start();
 });
+
+// Asyncify
+const t = new WeakMap();
+function e(t, e) {
+  return new Proxy(t, { get: (t, r) => e(t[r]) });
+}
+class r {
+  constructor() {
+    (this.value = void 0), (this.exports = null);
+  }
+  getState() {
+    return this.exports.asyncify_get_state();
+  }
+  assertNoneState() {
+    let t = this.getState();
+    if (0 !== t) throw new Error(`Invalid async state ${t}, expected 0.`);
+  }
+  wrapImportFn(t) {
+    return (...e) => {
+      if (2 === this.getState())
+        return this.exports.asyncify_stop_rewind(), this.value;
+      this.assertNoneState();
+      let r = t(...e);
+      if (
+        !(s = r) ||
+        ("object" != typeof s && "function" != typeof s) ||
+        "function" != typeof s.then
+      )
+        return r;
+      var s;
+      this.exports.asyncify_start_unwind(16), (this.value = r);
+    };
+  }
+  wrapModuleImports(t) {
+    return e(t, (t) => ("function" == typeof t ? this.wrapImportFn(t) : t));
+  }
+  wrapImports(t) {
+    if (void 0 !== t)
+      return e(t, (t = Object.create(null)) => this.wrapModuleImports(t));
+  }
+  wrapExportFn(e) {
+    let r = t.get(e);
+    console.log({ r, e: e.toString() });
+    return (
+      void 0 !== r ||
+        ((r = async (...t) => {
+          this.assertNoneState();
+          let r = e(...t);
+          for (; 1 === this.getState(); )
+            this.exports.asyncify_stop_unwind(),
+              (this.value = await this.value),
+              this.assertNoneState(),
+              this.exports.asyncify_start_rewind(16),
+              (r = e());
+          return this.assertNoneState(), r;
+        }),
+        t.set(e, r)),
+      r
+    );
+  }
+  wrapExports(e) {
+    console.log(e);
+    let r = Object.create(null);
+    for (let t in e) {
+      let s = e[t];
+      "function" != typeof s ||
+        t.startsWith("asyncify_") ||
+        (s = this.wrapExportFn(s)),
+        Object.defineProperty(r, t, { enumerable: !0, value: s });
+    }
+    return t.set(e, r), r;
+  }
+  init(t, e) {
+    const { exports: r } = t,
+      n = r.memory || (e.env && e.env.memory);
+    new Int32Array(n.buffer, 16).set([24, 1024]),
+      (this.exports = this.wrapExports(r)),
+      Object.setPrototypeOf(t, s.prototype);
+  }
+}
+class s extends WebAssembly.Instance {
+  constructor(t, e) {
+    let s = new r();
+    super(t, s.wrapImports(e)), s.init(this, e);
+  }
+  get exports() {
+    return t.get(super.exports);
+  }
+}
+async function n(t, e) {
+  let s = new r(),
+    n = await WebAssembly.instantiate(t, s.wrapImports(e));
+  return s.init(n instanceof WebAssembly.Instance ? n : n.instance, e), n;
+}
+async function instantiateStreaming(t, e) {
+  let s = new r(),
+    n = await WebAssembly.instantiateStreaming(t, s.wrapImports(e));
+  console.log(n);
+  return s.init(n.instance, e), n;
+}
