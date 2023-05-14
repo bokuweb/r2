@@ -1,0 +1,15 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+      - run: cargo check
+      - run: cargo build -p app
