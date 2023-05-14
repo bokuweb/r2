@@ -29,15 +29,10 @@ $ wasmtime ./target/wasm32-wasi/release/wasi.wasm
 ## Wasm
 
 ```sh
-$ cd wasm && npx serve
-```
-
-### Build
-
-```sh
 $ cd wasm
 $ cargo build --target wasm32-unknown-unknown --release
 $ wasm-opt --asyncify --pass-arg=asyncify-imports@env.keydown ../target/wasm32-unknown-unknown/release/wasm.wasm -o out.wasm
+$ npx serve
 ```
 
 ## Special Thanks
