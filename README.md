@@ -45,6 +45,7 @@ $ npx serve
 - [https://github.com/torvalds/linux/tree/master/arch/riscv](https://github.com/torvalds/linux/tree/master/arch/riscv)
 - [https://www.five-embeddev.com/riscv-isa-manual/latest/machine.html](https://www.five-embeddev.com/riscv-isa-manual/latest/machine.html)
 - [https://github.com/riscv/riscv-isa-manual/releases/download/Priv-v1.12/riscv-privileged-20211203.pdf](https://github.com/riscv/riscv-isa-manual/releases/download/Priv-v1.12/riscv-privileged-20211203.pdf)
+- [https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf](https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf)
 
 ## License
 
