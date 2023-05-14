@@ -1,0 +1,17 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy
+      - run: cargo check
+      - run: cargo build -p app
+      - run: cargo build -p wasi --target wasm32-wasi
+      - run: cargo build -p wasm --target wasm32-unknown-unknown
