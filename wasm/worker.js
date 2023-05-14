@@ -5,30 +5,22 @@ const elapsed_us = () => {
   return elapsed;
 };
 
-const wait = (us) => {
-  const start = performance.now();
-  let current = start;
-  const target = start + us / 1000;
-  while (current < target) {
-    current = performance.now();
-  }
-};
-
-let displayed = "";
 const tx = (s) => {
-  displayed += String.fromCharCode(s);
   postMessage(s);
 };
 
 const keybuf = [];
 const keydown = async () => {
+  if (!!keybuf.length) return true;
   await delay();
   return !!keybuf.length;
 };
+
 const rx = () => {
   const d = keybuf.shift();
   return d.charCodeAt(0);
 };
+
 self.addEventListener("message", (event) => {
   keybuf.push(event.data);
 });
@@ -39,47 +31,6 @@ const cachedTextDecoder = new TextDecoder("utf-8", {
   ignoreBOM: true,
   fatal: true,
 });
-
-cachedTextDecoder.decode();
-
-let cachedUint8Memory0 = null;
-
-function getUint8Memory0() {
-  if (cachedUint8Memory0 === null || cachedUint8Memory0.byteLength === 0) {
-    cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
-  }
-  return cachedUint8Memory0;
-}
-
-function getStringFromWasm0(ptr, len) {
-  return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
-}
-
-function notDefined(what) {
-  return () => {
-    throw new Error(`${what} is not defined`);
-  };
-}
-/**
- */
-class WasmCore {
-  __destroy_into_raw() {
-    const ptr = this.ptr;
-    this.ptr = 0;
-
-    return ptr;
-  }
-
-  free() {
-    const ptr = this.__destroy_into_raw();
-    wasm.__wbg_wasmcore_free(ptr);
-  }
-  /**
-   */
-  static async start() {
-    await wasm.wasmcore_start();
-  }
-}
 
 async function load(module, imports) {
   if (typeof Response === "function" && module instanceof Response) {
@@ -110,24 +61,16 @@ async function load(module, imports) {
 
 function getImports() {
   const imports = {};
-  imports.wbg = {};
-  imports.wbg.__wbg_elapsedus_06ff79887b966e05 =
-    typeof elapsed_us == "function" ? elapsed_us : notDefined("elapsed_us");
-  imports.wbg.__wbg_tx_97f8eca74be106c3 = function (arg0) {
+  imports.env = {};
+  imports.env.elapsed_us = elapsed_us;
+  imports.env.tx = function (arg0) {
     tx(arg0 >>> 0);
   };
-  imports.wbg.__wbg_keydown_a74a85d9b977730c =
-    typeof keydown == "function" ? keydown : notDefined("keydown");
-  imports.wbg.__wbg_rx_872d8f80b416285d =
-    typeof rx == "function" ? rx : notDefined("rx");
-  imports.wbg.__wbindgen_throw = function (arg0, arg1) {
-    throw new Error(getStringFromWasm0(arg0, arg1));
-  };
+  imports.env.keydown = keydown;
+  imports.env.rx = rx;
 
   return imports;
 }
-
-function initMemory(imports, maybe_memory) {}
 
 function finalizeInit(instance, module) {
   wasm = instance.exports;
@@ -150,9 +93,6 @@ async function init(input) {
   ) {
     input = fetch(input);
   }
-
-  initMemory(imports);
-
   const { instance, module } = await load(await input, imports);
 
   return finalizeInit(instance, module);
@@ -165,8 +105,8 @@ const delay = () =>
     })
   );
 
-init().then(async () => {
-  WasmCore.start();
+init().then((w) => {
+  w.start();
 });
 
 // Asyncify

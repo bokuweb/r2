@@ -35,8 +35,9 @@ $ cd wasm && npx serve
 ### Build
 
 ```sh
-$ cd wasm && wasm-pack build --target web
-$ wasm-opt --asyncify --pass-arg=asyncify-imports@wbg.__wbg_keydown_a74a85d9b977730c pkg/wasm_bg.wasm -o out.wasm
+$ cd wasm
+$ cargo build --target wasm32-unknown-unknown --release
+$ wasm-opt --asyncify --pass-arg=asyncify-imports@env.keydown ../target/wasm32-unknown-unknown/release/wasm.wasm -o out.wasm
 ```
 
 ## Special Thanks
