@@ -227,63 +227,64 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
         self.bus.step(&mut self.mip);
 
         // If interrupted
+        // MTIP（bit 7）：Machine timer interrupt pending
         if self.mip & 0x80 != 0 {
             self.wait_for_interrupt = false;
         } else if self.wait_for_interrupt {
             return CpuState::Idle;
         }
 
+        // bit3 in mstatus is MIE: Machine Interrupt Enable
         if (self.mip & 0x80 != 0) && (self.mie & 0x80 != 0) && (self.mstatus & 0x8 != 0) {
             self.exception = Interrupt::MachineTimerInterrupt.into();
-            self.pc -= 4;
-        } else {
-            self.cycle = self.cycle.wrapping_add(1);
+            self.process_exception();
+            return CpuState::Active;
+        }
 
-            let Ok(ir) = self.bus.read32(self.pc) else {
+        self.cycle = self.cycle.wrapping_add(1);
+
+        let Ok(ir) = self.bus.read32(self.pc) else {
                 self.record_exception(Exception::InstructionAddressMisaligned, self.pc);
                 self.process_exception();
                 return CpuState::Active;
             };
 
-            match ir & 0x7f {
-                0b0110111 => self.write_back(helpers::rd(ir), ir & 0xfffff000), // LUI
-                0b0010111 => {
-                    self.write_back(helpers::rd(ir), self.pc.wrapping_add(ir & 0xfffff000))
-                    // AUIPC
-                }
-                0b1101111 => self.jal(ir),    // JAL
-                0b1100111 => self.jalr(ir),   // JALR
-                0b1100011 => self.branch(ir), // Branch
-                0b0000011 => self.load(ir),   // Load
-                0b0100011 => self.store(ir),  // Store
-                0b0110011 if (ir & 0x02000000) != 0 && (ir & 0b100000) != 0 => {
-                    self.multi_or_div(ir) // RV32M
-                }
-                0b0010011 | 0b0110011 => self.op(ir), // Op
-                0b0001111 => {}                       // Fence.i, NOP in this emulator.
-                0b1110011 => {
-                    // Zicsr
-                    self.zicsr(ir);
-                    if self.wait_for_interrupt {
-                        return CpuState::Idle;
-                    }
-                }
-                0b0101111 => self.atomic(ir), // RV32A
-                _ => {
-                    self.record_exception(Exception::IllegalInstruction, ir);
+        match ir & 0x7f {
+            0b0110111 => self.write_back(helpers::rd(ir), ir & 0xfffff000), // LUI
+            0b0010111 => {
+                self.write_back(helpers::rd(ir), self.pc.wrapping_add(ir & 0xfffff000))
+                // AUIPC
+            }
+            0b1101111 => self.jal(ir),    // JAL
+            0b1100111 => self.jalr(ir),   // JALR
+            0b1100011 => self.branch(ir), // Branch
+            0b0000011 => self.load(ir),   // Load
+            0b0100011 => self.store(ir),  // Store
+            0b0110011 if (ir & 0x02000000) != 0 && (ir & 0b100000) != 0 => {
+                self.multi_or_div(ir) // RV32M
+            }
+            0b0010011 | 0b0110011 => self.op(ir), // Op
+            0b0001111 => {}                       // Fence.i, NOP in this emulator.
+            0b1110011 => {
+                // Zicsr
+                self.zicsr(ir);
+                if self.wait_for_interrupt {
+                    return CpuState::Idle;
                 }
             }
-
-            if self.exception != 0 {
-                self.process_exception();
-                return CpuState::Active;
+            0b0101111 => self.atomic(ir), // RV32A
+            _ => {
+                self.record_exception(Exception::IllegalInstruction, ir);
             }
-
-            self.pc += 4
         }
 
-        self.process_exception();
+        if self.exception != 0 {
+            self.process_exception();
+            return CpuState::Active;
+        }
 
+        self.pc += 4;
+        self.process_exception();
         CpuState::Active
     }
 
@@ -303,7 +304,6 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             if self.exception & 0x80000000 != 0 {
                 self.mcause = self.exception;
                 self.mtval = 0;
-                self.pc += 4;
             } else {
                 // Exception
                 self.mcause = self.exception;
