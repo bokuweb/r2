@@ -1,5 +1,7 @@
 # R2
 
+[![GitHub Actions Status](https://github.com/bokuweb/r2/workflows/ci/badge.svg)](https://github.com/bokuweb/r2/actions)
+
 A RISC-V emulator written in Rust :crab:.  
 Inspired [cnlohr/mini-rv32ima](https://github.com/cnlohr/mini-rv32ima).
 
