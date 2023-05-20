@@ -60,10 +60,11 @@ where
         match addr {
             0x1100bffc => Ok(self.clint.read(addr) as u8),
             0x1100bff8 => Ok(self.clint.read(addr) as u8),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 Ok(self.serial.read(addr))
             }
+            0x10000100..=0x12000000 => Ok(0),
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 Ok(self.ram[addr as usize])
@@ -78,10 +79,11 @@ where
         match addr {
             0x1100bffc => Ok(self.clint.read(addr) as u16),
             0x1100bff8 => Ok(self.clint.read(addr) as u16),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 Ok(self.serial.read(addr) as u16)
             }
+            0x10000100..=0x12000000 => Ok(0),
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 Ok(u16::from_le_bytes([
@@ -99,10 +101,11 @@ where
         match addr {
             0x1100bffc => Ok(self.clint.read(addr & 0xffff)),
             0x1100bff8 => Ok(self.clint.read(addr & 0xffff)),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 Ok(self.serial.read(addr) as u32)
             }
+            0x10000100..=0x12000000 => Ok(0),
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 Ok(u32::from_le_bytes([
@@ -128,10 +131,11 @@ where
             // mtime
             0x11004004 => self.clint.write(addr & 0xffff, v as u32),
             0x11004000 => self.clint.write(addr & 0xffff, v as u32),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 self.serial.write(addr, v as u32);
             }
+            0x10000100..=0x12000000 => {}
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 self.ram[addr as usize] = v;
@@ -153,10 +157,11 @@ where
             // mtime
             0x11004004 => self.clint.write(addr & 0xffff, v as u32),
             0x11004000 => self.clint.write(addr & 0xffff, v as u32),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 self.serial.write(addr, v as u32);
             }
+            0x10000100..=0x12000000 => {}
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 self.ram[addr as usize..addr as usize + 2].copy_from_slice(&v.to_le_bytes());
@@ -178,10 +183,11 @@ where
             // mtime
             0x11004004 => self.clint.write(addr & 0xffff, v),
             0x11004000 => self.clint.write(addr & 0xffff, v),
-            0x10000000..=0x12000000 => {
+            0x10000000..=0x100000ff => {
                 let addr = addr & 0xffff;
                 self.serial.write(addr, v);
             }
+            0x10000100..=0x12000000 => {}
             _ => {
                 let addr = addr.wrapping_sub(RAM_START);
                 self.ram[addr as usize..addr as usize + 4].copy_from_slice(&v.to_le_bytes());
