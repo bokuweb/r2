@@ -1,7 +1,7 @@
 use libc::{poll, pollfd, read, POLLIN};
 use std::os::fd::AsRawFd;
 
-pub fn read_kb_byte() -> u32 {
+pub fn read_key() -> u32 {
     let stdin_fd = std::io::stdin().as_raw_fd();
     let mut buffer: [u8; 1] = [0];
     let result = unsafe { read(stdin_fd, buffer.as_mut_ptr() as *mut libc::c_void, 1) };
@@ -13,7 +13,7 @@ pub fn read_kb_byte() -> u32 {
     }
 }
 
-pub fn is_kb_hit() -> bool {
+pub fn is_keydown() -> bool {
     let stdin_fd = std::io::stdin().as_raw_fd();
     let mut fds = pollfd {
         fd: stdin_fd,

@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::keyboard::{is_kb_hit, read_kb_byte};
+use crate::keyboard::{is_keydown, read_key};
 
 #[derive(Debug, Default)]
 pub struct Uart;
@@ -14,8 +14,8 @@ impl Uart {
 impl device_interfaces::SerialInterface for Uart {
     fn read(&self, addr: u32) -> u8 {
         match addr {
-            0x0005 => 0x60 | if is_kb_hit() { 1 } else { 0 },
-            0x0000 if is_kb_hit() => read_kb_byte() as u8,
+            0x0005 => 0x60 | if is_keydown() { 1 } else { 0 },
+            0x0000 if is_keydown() => read_key() as u8,
             _ => 0,
         }
     }
