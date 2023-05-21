@@ -589,22 +589,22 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
         let reg = (ir & 0b100000) != 0;
         let rs2 = if reg { self.x[imm as usize & 0x1f] } else { imm };
 
-        let mut v = 0;
-        match (ir >> 12) & 7 {
-            0b000 if reg && (ir & 0x4000_0000) != 0 => v = rs1.wrapping_sub(rs2),
-            0b000 => v = rs1.wrapping_add(rs2),
-            0b001 => v = rs1 << (rs2 & 0x1f),
-            0b010 => v = if (rs1 as i32) < (rs2 as i32) { 1 } else { 0 },
-            0b011 => v = if rs1 < rs2 { 1 } else { 0 },
-            0b100 => v = rs1 ^ rs2,
-            0b101 if (ir & 0x40000000) != 0 => v = ((rs1 as i32) >> (rs2 & 0x1f)) as u32,
-            0b101 => v = rs1 >> (rs2 & 0x1f),
-            0b110 => v = rs1 | rs2,
-            0b111 => v = rs1 & rs2,
+        let v = match (ir >> 12) & 7 {
+            0b000 if reg && (ir & 0x4000_0000) != 0 => rs1.wrapping_sub(rs2),
+            0b000 => rs1.wrapping_add(rs2),
+            0b001 => rs1 << (rs2 & 0x1f),
+            0b010 => ((rs1 as i32) < (rs2 as i32)) as u32,
+            0b011 => (rs1 < rs2) as u32,
+            0b100 => rs1 ^ rs2,
+            0b101 if (ir & 0x40000000) != 0 => ((rs1 as i32) >> (rs2 & 0x1f)) as u32,
+            0b101 => rs1 >> (rs2 & 0x1f),
+            0b110 => rs1 | rs2,
+            0b111 => rs1 & rs2,
             _ => {
                 self.record_exception(Exception::IllegalInstruction, ir);
+                0
             }
-        }
+        };
         self.write_back(rd, v)
     }
 
