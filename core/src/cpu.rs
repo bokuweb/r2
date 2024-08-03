@@ -244,10 +244,10 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
         self.cycle = self.cycle.wrapping_add(1);
 
         let Ok(ir) = self.bus.read32(self.pc) else {
-                self.record_exception(Exception::InstructionAddressMisaligned, self.pc);
-                self.process_exception();
-                return CpuState::Active;
-            };
+            self.record_exception(Exception::InstructionAddressMisaligned, self.pc);
+            self.process_exception();
+            return CpuState::Active;
+        };
 
         match ir & 0x7f {
             0b0110111 => self.write_back(helpers::rd(ir), ir & 0xfffff000), // LUI
@@ -266,10 +266,16 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             0b0010011 | 0b0110011 => self.op(ir), // Op
             0b0001111 => {}                       // Fence.i, NOP in this emulator.
             0b1110011 => {
-                // Zicsr
-                self.zicsr(ir);
-                if self.wait_for_interrupt {
-                    return CpuState::Idle;
+                let op = (ir >> 12) & 0b111;
+                // system
+                if op == 0 {
+                    self.system(ir);
+                    if self.wait_for_interrupt {
+                        return CpuState::Idle;
+                    }
+                } else {
+                    // Zicsr
+                    self.zicsr(ir);
                 }
             }
             0b0101111 => self.atomic(ir), // RV32A
@@ -404,7 +410,6 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
                 self.record_exception(Exception::IllegalInstruction, ir);
             }
         }
-        // }
     }
 
     fn store(&mut self, ir: u32) {
@@ -655,32 +660,36 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
                 0x343 => self.mtval = val,
                 _ => {}
             }
-        } else if op == 0b000 {
-            if csr == 0x105 {
-                //WFI
-                self.mstatus |= 8;
-                self.wait_for_interrupt = true; //Inform environment we want to go to sleep.
-                self.pc += 4;
-            } else if (csr & 0xff) == 0x02 {
-                // MRET
-                let prev_mstatus = self.mstatus;
-                let prev_mode: u32 = self.previous_mode.into();
-                self.mstatus = ((prev_mstatus & 0x80) >> 4) | (prev_mode << 11) | 0x80;
-                self.previous_mode = PrivilegeMode::from(prev_mstatus >> 11);
-                self.pc = self.mepc - 4;
-            } else {
-                match csr {
-                    0 if self.previous_mode != PrivilegeMode::User => {
-                        self.exception = Exception::EnvironmentCallMmode.into()
-                    }
-                    0 => self.exception = Exception::EnvironmentCallUmode.into(),
-                    1 => self.exception = Exception::Breakpoint.into(),
-                    _ => self.record_exception(Exception::IllegalInstruction, ir),
-                }
-            }
         } else {
             self.record_exception(Exception::IllegalInstruction, ir);
         }
         self.write_back(rd, v);
+    }
+
+    // system
+    fn system(&mut self, ir: u32) {
+        let csr = ir >> 20;
+        if csr == 0x105 {
+            //WFI
+            self.mstatus |= 8;
+            self.wait_for_interrupt = true; //Inform environment we want to go to sleep.
+            self.pc += 4;
+        } else if (csr & 0xff) == 0x02 {
+            // MRET
+            let prev_mstatus = self.mstatus;
+            let prev_mode: u32 = self.previous_mode.into();
+            self.mstatus = ((prev_mstatus & 0x80) >> 4) | (prev_mode << 11) | 0x80;
+            self.previous_mode = PrivilegeMode::from(prev_mstatus >> 11);
+            self.pc = self.mepc - 4;
+        } else {
+            match csr {
+                0 if self.previous_mode != PrivilegeMode::User => {
+                    self.exception = Exception::EnvironmentCallMmode.into()
+                }
+                0 => self.exception = Exception::EnvironmentCallUmode.into(),
+                1 => self.exception = Exception::Breakpoint.into(),
+                _ => self.record_exception(Exception::IllegalInstruction, ir),
+            }
+        }
     }
 }
