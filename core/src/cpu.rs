@@ -243,10 +243,17 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
 
         self.cycle = self.cycle.wrapping_add(1);
 
-        let Ok(ir) = self.bus.read32(self.pc) else {
-            self.record_exception(Exception::InstructionAddressMisaligned, self.pc);
-            self.process_exception();
-            return CpuState::Active;
+        let ir = match self.bus.read32(self.pc) {
+            Ok(ir) => ir,
+            Err(e) => {
+                let e = match e {
+                    BusException::LoadAddressMisaligned => Exception::InstructionAddressMisaligned,
+                    _ => Exception::InstructionAccessFault,
+                };
+                self.record_exception(e, self.pc);
+                self.process_exception();
+                return CpuState::Active;
+            }
         };
 
         match ir & 0x7f {
@@ -289,7 +296,7 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             return CpuState::Active;
         }
 
-        self.pc += 4;
+        self.pc = self.pc.wrapping_add(4);
         self.process_exception();
         CpuState::Active
     }
@@ -337,7 +344,7 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             | ((ir & 0x00100000) >> 9)
             | (ir & 0x000ff000);
         let rel = if rel & 0x00100000 != 0 { rel | 0xffe00000 } else { rel } as i32;
-        let v = self.pc + 4;
+        let v = self.pc.wrapping_add(4);
         self.pc = (self.pc as i64 + rel as i64 - 4) as u32;
         self.write_back(rd, v);
     }
@@ -346,7 +353,7 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
         let rd = helpers::rd(ir);
         let imm = ir >> 20;
         let imm_s = imm | if (imm & 0x800) != 0 { 0xfffff000 } else { 0 };
-        let v = self.pc + 4;
+        let v = self.pc.wrapping_add(4);
         let rs1 = self.x[helpers::rs1(ir)];
         self.pc = (((rs1 as i64 + imm_s as i32 as i64) & !1) - 4) as u32;
         self.write_back(rd, v)
@@ -387,23 +394,23 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
         match (ir >> 12) & 0x7 {
             // LB, LH, LW, LBU, LHU
             0b000 => match self.bus.read8(rsval) {
-                Ok(v) => self.x[rd] = (v as i8) as u32,
+                Ok(v) => self.write_back(rd, (v as i8) as u32),
                 Err(e) => self.record_exception(e.into(), rsval),
             },
             0b001 => match self.bus.read16(rsval) {
-                Ok(v) => self.x[rd] = (v as i16) as u32,
+                Ok(v) => self.write_back(rd, (v as i16) as u32),
                 Err(e) => self.record_exception(e.into(), rsval),
             },
             0b010 => match self.bus.read32(rsval) {
-                Ok(v) => self.x[rd] = v,
+                Ok(v) => self.write_back(rd, v),
                 Err(e) => self.record_exception(e.into(), rsval),
             },
             0b100 => match self.bus.read8(rsval) {
-                Ok(v) => self.x[rd] = v as u32,
+                Ok(v) => self.write_back(rd, v as u32),
                 Err(e) => self.record_exception(e.into(), rsval),
             },
             0b101 => match self.bus.read16(rsval) {
-                Ok(v) => self.x[rd] = v as u32,
+                Ok(v) => self.write_back(rd, v as u32),
                 Err(e) => self.record_exception(e.into(), rsval),
             },
             _ => {
@@ -573,11 +580,14 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             0b001 => v = ((rs1 as i32 as i64).wrapping_mul(rs2 as i32 as i64) >> 32) as u32, // MULH
             0b010 => v = ((rs1 as i32 as i64).wrapping_mul(rs2 as i64) >> 32) as u32, // MULHSU
             0b011 => v = ((rs1 as u64).wrapping_mul(rs2 as u64) >> 32) as u32, // MULHU
-            0b100 => v = if rs2 == 0 { !0 } else { (rs1).wrapping_div(rs2) }, // DIV
+            0b100 => {
+                // DIV
+                v = if rs2 == 0 { !0 } else { (rs1 as i32).wrapping_div(rs2 as i32) as u32 }
+            }
             0b101 => v = if rs2 == 0 { u32::MAX } else { rs1 / rs2 }, // DIVU
-            0b110 if rs2 == 0 => v = 0,         // REM
+            0b110 if rs2 == 0 => v = 0,                               // REM
             0b110 => v = (rs1 as i32).wrapping_rem(rs2 as i32) as u32, // REM
-            0b111 => v = if rs2 == 0 { rs1 } else { rs1 % rs2 }, // REMU
+            0b111 => v = if rs2 == 0 { rs1 } else { rs1 % rs2 },      // REMU
             _ => {
                 self.record_exception(Exception::IllegalInstruction, ir);
             }
@@ -673,14 +683,14 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             //WFI
             self.mstatus |= 8;
             self.wait_for_interrupt = true; //Inform environment we want to go to sleep.
-            self.pc += 4;
+            self.pc = self.pc.wrapping_add(4);
         } else if (csr & 0xff) == 0x02 {
             // MRET
             let prev_mstatus = self.mstatus;
             let prev_mode: u32 = self.previous_mode.into();
             self.mstatus = ((prev_mstatus & 0x80) >> 4) | (prev_mode << 11) | 0x80;
-            self.previous_mode = PrivilegeMode::from(prev_mstatus >> 11);
-            self.pc = self.mepc - 4;
+            self.previous_mode = PrivilegeMode::from((prev_mstatus >> 11) & 0b11);
+            self.pc = self.mepc.wrapping_sub(4);
         } else {
             match csr {
                 0 if self.previous_mode != PrivilegeMode::User => {

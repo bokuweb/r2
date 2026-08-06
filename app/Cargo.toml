@@ -8,7 +8,9 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.11", features = ["derive"] }
-core = { path = "../core" }
+# Aliased because a dependency literally named `core` shadows the `core`
+# built-in crate inside macro expansions such as clap's derive.
+r2_core = { path = "../core", package = "core" }
 devices = { path = "../devices" }
 device_interfaces = { path = "../device_interfaces" }
 

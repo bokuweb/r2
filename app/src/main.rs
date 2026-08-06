@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 
-use core::{
+use r2_core::{
     bus::{Bus, RAM_START},
     clint::Clint,
     start,
