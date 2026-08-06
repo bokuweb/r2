@@ -28,8 +28,8 @@ The terminal is put into raw mode while the emulator runs, so every keystroke in
 ## WASI
 
 ```sh
-$ cargo build -p wasi --target wasm32-wasi --release
-$ wasmtime ./target/wasm32-wasi/release/wasi.wasm
+$ cargo build -p wasi --target wasm32-wasip1 --release
+$ wasmtime ./target/wasm32-wasip1/release/wasi.wasm
 ```
 
 ## Wasm

@@ -1,5 +1,8 @@
 use core::bus::RAM_START;
 
+// Rust 1.82 stopped turning undefined symbols into `env` imports implicitly,
+// so the module has to be named for the host functions worker.js provides.
+#[link(wasm_import_module = "env")]
 extern "C" {
     fn elapsed_us() -> usize;
     fn tx(s: u32);
