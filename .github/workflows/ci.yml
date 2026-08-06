@@ -11,7 +11,9 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-          targets: wasm32-unknown-unknown, wasm32-wasip1
+      # Run inside the checkout so the `rust-toolchain` override decides which
+      # toolchain gets the targets.
+      - run: rustup target add wasm32-unknown-unknown wasm32-wasip1
       - run: cargo check
       - run: cargo build -p app
       - run: cargo build -p wasm --release --target wasm32-unknown-unknown
