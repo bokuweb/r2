@@ -11,5 +11,8 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+          targets: wasm32-unknown-unknown, wasm32-wasip1
       - run: cargo check
       - run: cargo build -p app
+      - run: cargo build -p wasm --release --target wasm32-unknown-unknown
+      - run: cargo build -p wasi --release --target wasm32-wasip1
