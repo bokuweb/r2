@@ -40,6 +40,14 @@ impl device_interfaces::SerialInterface for Term {
 
 #[no_mangle]
 pub extern "C" fn start() {
+    // A panic traps the module and leaves the worker dead with nothing but an
+    // `unreachable` in the console, so route the message to the terminal.
+    std::panic::set_hook(Box::new(|info| {
+        for b in format!("\r\n[panic] {info}\r\n").bytes() {
+            unsafe { tx(b as u32) }
+        }
+    }));
+
     let ram_size = 640 * 1024 * 1024;
 
     let mut ram = vec![0u8; ram_size];

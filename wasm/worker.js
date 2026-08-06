@@ -106,7 +106,9 @@ const delay = () =>
   );
 
 init().then((w) => {
-  w.start();
+  w.start().catch((e) => {
+    for (const c of `\r\n[emulator stopped] ${e}\r\n`) postMessage(c.codePointAt(0));
+  });
 });
 
 // Asyncify
