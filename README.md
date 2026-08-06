@@ -21,6 +21,10 @@ You can run linux in your browser.
 $ cargo run -p app -- -i fixtures/linux.bin -d fixtures/default.dtb
 ```
 
+The terminal is put into raw mode while the emulator runs, so every keystroke including
+`Ctrl-C` is delivered to the guest. Press `Ctrl-A` `x` to quit the emulator, or `Ctrl-A`
+`Ctrl-A` to send a literal `Ctrl-A` to the guest.
+
 ## WASI
 
 ```sh
