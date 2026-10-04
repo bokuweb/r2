@@ -1,0 +1,27 @@
+[package]
+name = "r2-gba"
+version = "0.1.0"
+edition = "2021"
+
+# Runs the r2 RISC-V core on a Game Boy Advance and boots Linux on it.
+# Built for `thumbv4t-none-eabi` (see .cargo/config.toml), so it lives outside
+# the host workspace.
+[workspace]
+
+[features]
+# Boot the tiny bare-metal test program instead of Linux.
+baremetal = []
+
+[dependencies]
+r2_core = { path = "../core", package = "core", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+
+[profile.dev]
+opt-level = 1
+panic = "abort"
