@@ -1,11 +1,17 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
 pub mod bus;
 pub mod bus_interface;
 pub mod clint;
 pub mod cpu;
 
+#[cfg(feature = "std")]
 use bus_interface::{BusController, BusReader, BusWriter};
+#[cfg(feature = "std")]
 use cpu::{Cpu, CpuState};
 
+#[cfg(feature = "std")]
 pub fn start<B: BusController + BusReader + BusWriter>(
     bus: B,
     pc: u32,
