@@ -50,8 +50,8 @@ pub struct Cpu<B> {
     wait_for_interrupt: bool,
     /// Previous privilege mode.
     previous_mode: PrivilegeMode,
-    /// This is used to reserve addresses for LR/SC
-    reserved_load_addresses: std::collections::HashMap<u32, u32>,
+    /// Address and value reserved by the last LR.W, consumed by SC.W.
+    reservation: Option<(u32, u32)>,
     /// It is used to record exception reason for mtval
     cause: u32,
 }
@@ -74,7 +74,7 @@ impl<B: BusController + BusReader + BusWriter> Cpu<B> {
             exception: 0,
             wait_for_interrupt: false,
             previous_mode: PrivilegeMode::Machine,
-            reserved_load_addresses: std::collections::HashMap::new(),
+            reservation: None,
             cause: 0,
         }
     }
@@ -220,6 +220,10 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
 
     pub fn bus(&self) -> &B {
         &self.bus
+    }
+
+    pub fn bus_mut(&mut self) -> &mut B {
+        &mut self.bus
     }
 
     pub fn step(&mut self) -> CpuState {
@@ -470,14 +474,14 @@ impl<B: BusController + BusWriter + BusReader> Cpu<B> {
             // LR.W
             // Load-Reserved Word
             0b00010 => {
-                self.reserved_load_addresses.insert(rs1, v);
+                self.reservation = Some((rs1, v));
                 self.write_back(rd, v)
             }
             // SC.W
             // Store-Conditional Word
             0b00011 => {
-                if let Some(val) = self.reserved_load_addresses.get(&rs1) {
-                    if *val == v {
+                if let Some((addr, val)) = self.reservation.take() {
+                    if addr == rs1 && val == v {
                         self.bus
                             .write32(rs1, rs2)
                             .unwrap_or_else(|e| self.record_exception(e.into(), rs1));

@@ -1,4 +1,4 @@
-use std::error::Error;
+use core::error::Error;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BusException {
@@ -8,8 +8,8 @@ pub enum BusException {
     StoreAccessFault,
 }
 
-impl std::fmt::Display for BusException {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for BusException {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::LoadAddressMisaligned => write!(f, "LoadAddressMisaligned,"),
             Self::LoadAccessFault => write!(f, "LoadAccessFault,"),

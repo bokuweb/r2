@@ -1,0 +1,9 @@
+[build]
+target = "armv4t-none-eabi"
+
+[unstable]
+build-std = ["core"]
+build-std-features = ["compiler-builtins-mem"]
+
+[target.armv4t-none-eabi]
+rustflags = ["-Clink-arg=-Tgba.ld"]

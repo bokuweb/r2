@@ -5,6 +5,12 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["std"]
+# `std` brings in the Vec-backed `Bus` and the `start` run loop. Without it the
+# CPU core is `no_std` so it can be embedded on bare-metal hosts (see `gba/`).
+std = []
+
 [dependencies]
 device_interfaces = { path = "../device_interfaces" }
 
