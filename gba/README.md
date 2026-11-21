@@ -15,7 +15,7 @@ expose the 32MB GamePak ROM window as writable memory, so:
 | `0x08000000-0x08FFFFFF`   | this program + embedded kernel image/DTB  |
 | `0x09000000-0x09FFFFFF`   | guest RAM (16MB, guest `0x80000000-`)     |
 | IWRAM                     | the interpreter loop (ARM code) and stack |
-| VRAM (Mode 3)             | 60x26 text console (4x6 font)             |
+| VRAM (Mode 3)             | 48x20 text console (5x8 font)             |
 
 At boot the kernel is copied into guest RAM and the DTB is placed at its end
 (its memory size is patched like mini-rv32ima does).

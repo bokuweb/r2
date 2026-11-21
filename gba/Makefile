@@ -8,8 +8,8 @@ ELF := target/armv4t-none-eabi/release/r2-gba
 all: target/r2-gba.gba
 
 baremetal: FORCE
-	cargo build --release --features baremetal --target-dir target/baremetal
-	$(OBJCOPY) -O binary target/baremetal/armv4t-none-eabi/release/r2-gba target/r2-gba-baremetal.gba
+	cargo build --release --features baremetal
+	$(OBJCOPY) -O binary $(ELF) target/r2-gba-baremetal.gba
 
 target/r2-gba.gba: FORCE
 	cargo build --release

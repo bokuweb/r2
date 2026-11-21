@@ -1,15 +1,15 @@
-//! Guest serial console: a 60x26 text terminal on the Mode 3 bitmap (4x6
+//! Guest serial console: a 48x20 text terminal on the Mode 3 bitmap (5x8
 //! font), mirrored line by line to the mGBA debug log. Input comes from the
 //! GBA buttons, each of which types a canned shell command.
 
 use core::fmt;
 
-use crate::font::GLYPHS;
+use crate::font::{GLYPHS, HEIGHT, WIDTH};
 use crate::gba;
 
-const COLS: usize = 240 / 4;
-const ROWS: usize = 160 / 6;
-const FG: u16 = 0x6f7b; // light grey
+const COLS: usize = 240 / WIDTH;
+const ROWS: usize = 160 / HEIGHT;
+const FG: u16 = 0x77bd; // light grey
 const BG: u16 = 0x0000;
 
 /// What each button types into the guest.
@@ -136,7 +136,7 @@ impl Console {
         if self.row + 1 < ROWS {
             self.row += 1;
         } else {
-            gba::scroll_up(6, ROWS * 6, BG);
+            gba::scroll_up(HEIGHT, ROWS * HEIGHT, BG);
         }
     }
 
@@ -171,13 +171,13 @@ impl Console {
 fn draw_glyph(col: usize, row: usize, b: u8) {
     let glyph = &GLYPHS[(b - 0x20) as usize];
     for (y, bits) in glyph.iter().enumerate() {
-        let mut px = [BG; 4];
+        let mut px = [BG; WIDTH];
         for (x, p) in px.iter_mut().enumerate() {
-            if bits & (8 >> x) != 0 {
+            if bits & (1 << (WIDTH - 1 - x)) != 0 {
                 *p = FG;
             }
         }
-        gba::put_pixels(col * 4, row * 6 + y, &px);
+        gba::put_pixels(col * WIDTH, row * HEIGHT + y, &px);
     }
 }
 
